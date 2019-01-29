@@ -31,31 +31,38 @@ router.post('/register', (req, res) => {
     if(user){
       errors.email = "A user has already registered with this email";
       return res.status(400).json(errors);
-      // return res.status(400).json({ email: 'A user has already registered with this email' });
     } else {
-      const newUser = new User({
-        handle: req.body.handle,
-        email: req.body.email,
-        password: req.body.password
-      });
+      User.findOne({ handle: req.body.handle })
+      .then(user => {
+        if(user){
+          errors.handle = "This handle is not available";
+          return res.status(400).json(errors);
+        } else {
+          const newUser = new User({
+            handle: req.body.handle,
+            email: req.body.email,
+            password: req.body.password
+          });
 
-      bcrypt.genSalt(10, (err, salt) => {
-        bcrypt.hash(newUser.password, salt, (err, hash) => {
-          if(err) throw err;
-          newUser.password = hash;
-          newUser.save()
-          .then(user => {
-            const payload = { id: user.id, handle: user.handle };
+          bcrypt.genSalt(10, (err, salt) => {
+            bcrypt.hash(newUser.password, salt, (err, hash) => {
+              if(err) throw err;
+              newUser.password = hash;
+              newUser.save()
+              .then(user => {
+                const payload = { id: user.id, handle: user.handle };
 
-            jwt.sign(payload, keys.secretOrKey, { expiresIn: 3600 }, (err, token) => {
-              res.json({
-                success: true,
-                token: 'Bearer ' + token
-              });
+                jwt.sign(payload, keys.secretOrKey, { expiresIn: 3600 }, (err, token) => {
+                  res.json({
+                    success: true,
+                    token: 'Bearer ' + token
+                  });
+                });
+              })
+              .catch(err => console.log(err));
             });
-          })
-          .catch(err => console.log(err));
-        });
+          });
+        }
       });
     }
   });
@@ -77,7 +84,6 @@ router.post('/login', (req, res) => {
     if(!user){
       errors.email = "This user does not exist";
       return res.status(404).json(errors);
-      // return res.status(404).json({ email: 'This user does not exist' });
     } else {
       bcrypt.compare(password, user.password)
       .then(isMatch => {
@@ -94,7 +100,6 @@ router.post('/login', (req, res) => {
         } else {
           errors.password = "Incorrect Password";
           return res.status(400).json(errors);
-          // return res.status(400).json({ password: 'Password is incorrect' });
         }
       });
     }
