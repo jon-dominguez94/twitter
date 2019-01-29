@@ -3,13 +3,22 @@ const router = express.Router();
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../../models/User");
+const keys = require("../../config/keys");
 
 router.get("/test", (req, res) => res.json({ msg: "This is the users route" }));
 
 router.post('/register', (req, res) => {
+  // const { errors, isValid } = validateRegisterInput(req.body);
+  
+  // if(!isValid){
+  //   return res.status(400).json(errors);
+  // }
+
   User.findOne({ email: req.body.email })
   .then(user => {
     if(user){
+      // errors.email = "A user has already registered with this email";
+      // return res.status(400).json(errors);
       return res.status(400).json({ email: 'A user has already registered with this email' });
     } else {
       const newUser = new User({
@@ -23,7 +32,16 @@ router.post('/register', (req, res) => {
           if(err) throw err;
           newUser.password = hash;
           newUser.save()
-          .then(user => res.json(user))
+          .then(user => {
+            const payload = { id: user.id, handle: user.handle };
+
+            jwt.sign(payload, keys.secretOrKey, { expiresIn: 3600 }, (err, token) => {
+              res.json({
+                success: true,
+                token: 'Bearer ' + token
+              });
+            });
+          })
           .catch(err => console.log(err));
         });
       });
@@ -32,19 +50,38 @@ router.post('/register', (req, res) => {
 });
 
 router.post('/login', (req, res) => {
+
+  // const { errors, isValid } = validateLoginInput(req.body);
+
+  // if(!isValid){
+  //   return res.status(400).json(errors);
+  // }
+
   const email = req.body.email;
   const password = req.body.password;
 
   User.findOne({ email })
   .then(user => {
     if(!user){
+      // errors.email = "This user does not exist";
+      // return res.status(404).json(errors);
       return res.status(404).json({ email: 'This user does not exist' });
     } else {
       bcrypt.compare(password, user.password)
       .then(isMatch => {
         if(isMatch){
-          res.json({ msg: 'Success'});
+          const payload = { id: user.id, handle: user.handle };
+
+          jwt.sign(payload, keys.secretOrKey, { expiresIn: 3600 }, (err, token) => {
+              res.json({
+                success: true,
+                token: 'Bearer ' + token
+              });
+            }
+          );
         } else {
+          // errors.password = "Incorrect Password";
+          // return res.status(400).json(errors);
           return res.status(400).json({ password: 'Password is incorrect' });
         }
       });
