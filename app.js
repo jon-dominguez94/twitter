@@ -9,6 +9,16 @@ mongoose
   .then(() => console.log("Connected to MongoDB successfully"))
   .catch(err => console.log(err));
 
+const bodyParser = require("body-parser");
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
+
+const users = require("./routes/api/users");
+const tweets = require("./routes/api/tweets");
+
+app.use("/api/users", users);
+app.use("/api/tweets", tweets);
+
 app.get('/', (req, res) => res.send("Yo World"));
 
 const port = process.env.PORT || 5000;
